@@ -59,12 +59,23 @@ void print(char *value, unsigned fgcolor, unsigned bgcolor){
 				break;
 		}
 	}
-	GSPGPU_FlushDataCache((void*)buf, BUFFER_SIZE);
-	GX_SetTextureCopy((void*)buf, (void*)BOTTOM_FB0_LOC, BUFFER_SIZE, 0, 0, 0, 0, 8);
-	svcSleepThread(0x400000LL);
-	GSPGPU_FlushDataCache((void*)buf, BUFFER_SIZE);
-	GX_SetTextureCopy((void*)buf, (void*)BOTTOM_FB1_LOC, BUFFER_SIZE, 0, 0, 0, 0, 8);
-	svcSleepThread(0x400000LL);
+	WriteFB(buf, 0, BUFFER_SIZE);
+}
+
+void CopyMem(void *src, void *dst, unsigned size){ 
+	GSPGPU_FlushDataCache(src, size); 
+	GX_SetTextureCopy(src, dst, size, 0, 0, 0, 0, 8); 
+	GSPGPU_FlushDataCache(dst, size); 
+	svcSleepThread(0x200000LL); 
+}
+
+void WriteFB(void *buf, unsigned offset, unsigned size){
+	CopyMem(buf, (void*)(BOTTOM_FB0_LOC + offset), size);
+	CopyMem(buf, (void*)(BOTTOM_FB1_LOC + offset), size);
+}
+
+void ReadFB(void *buf, unsigned offset, unsigned size){
+	CopyMem((void*)(BOTTOM_FB0_LOC + offset), buf, size);
 }
 
 void print(char *value){
@@ -89,6 +100,11 @@ void print(unsigned value){
 int uvl_entry()
 {
 	for (unsigned i = 0; i < BOTTOM_X_RES * BOTTOM_Y_RES * BYTES_PER_PIXEL >> 2; buf[i++] = 0xFFFFFFFF);
+	abca bcab cabc abca
+	bcab cabc abca bcab
+	cabc abca bcab cabc
+	
+	
 	print("test string\n\t");
 	print(0x12345678);
 }

@@ -3,7 +3,7 @@
 #define VRAM_LOC	0x1F000000
 #define BOTTOM_FB0_LOC	(void*)(VRAM_LOC + 0x0048F000)
 #define BOTTOM_FB1_LOC	(void*)(VRAM_LOC + 0x004C7800)
-#define MEM_STRIPE_SIZE 0x10
+#define MEM_STRIPE_SIZE 16
 #define BYTES_PER_PIXEL	3
 #define CHAR_WIDTH	8
 #define CHAR_HEIGHT	8
@@ -14,7 +14,7 @@
 #define BOTTOM_ROWS	BOTTOM_Y_RES / CHAR_HEIGHT
 #define BUFFER_LOC	(void*)0x18410000
 #define BUFFER_SIZE	BOTTOM_FB_SIZE
-#define FONT_START	0x20
+#define FONT_START	32
 #define COLOR_FG_DEF	0x00FFFFFF
 #define COLOR_BG_DEF	0x00000000
 #define COLOR_TRANS	0xFF000000
@@ -25,6 +25,26 @@ unsigned *buf = (unsigned *)0x18411000;
 unsigned char *bufc = (unsigned char*)0x18411000;
 
 unsigned col = 0, row = 0;
+
+void CopyMem(void *src, void *dst, unsigned size){ 
+	GSPGPU_FlushDataCache(src, size); 
+	GX_SetTextureCopy(src, dst, size, 0, 0, 0, 0, 8); 
+	GSPGPU_FlushDataCache(dst, size); 
+	svcSleepThread(0x200000LL); 
+}
+
+void WriteFB(void *buf, unsigned offset, unsigned size){
+	CopyMem(buf, (void*)(BOTTOM_FB0_LOC + offset), size);
+	CopyMem(buf, (void*)(BOTTOM_FB1_LOC + offset), size);
+}
+
+void ReadFB(void *buf, unsigned offset, unsigned size){
+	CopyMem((void*)(BOTTOM_FB0_LOC + offset), buf, size);
+}
+
+void clearscreen(unsigned color){
+	unsigned offs;
+}
 
 void print(char *value, unsigned fgcolor, unsigned bgcolor){
 	unsigned pos = 0, offs, fontoffs, x, y, color;
@@ -60,58 +80,40 @@ void print(char *value, unsigned fgcolor, unsigned bgcolor){
 					buf[offs] = color;
 					color >>= 8;
 				}
-				for(i = 0; i < BOTTOM_FB_SIZE; i += MEM_STRIPE_SIZE * BYTES_PER_PIXEL){
+				for(offs = 0; offs < BOTTOM_FB_SIZE; offs += MEM_STRIPE_SIZE * BYTES_PER_PIXEL){
 					WriteFB(buf, offs, MEM_STRIPE_SIZE * BYTES_PER_PIXEL);
 				}
 				break;
 			case "\r":
 				col = 0;
 				break;
-			case "\e":
-				
-				break;
 			default:
-				ReadFB( buf, offset?, BOTTOM_Y_RES * CHAR_WIDTH * BYTES_PER_PIXEL );
-				
-				fontoffs = c - FONT_START << 3;
-				offs = ((BOTTOM_ROWS - row) * CHAR_HEIGHT - 1 + col * BOTTOM_Y_RES * CHAR_WIDTH) * BYTES_PER_PIXEL;
-				for(y = 0; y < CHAR_HEIGHT; y++){
-					c = font[fontoffs++];
-					for(x = 0; x < BOTTOM_Y_RES * BYTES_PER_PIXEL * CHAR_WIDTH; x++){
-						if(~(color = c & 0x80 ? fgcolor : bgcolor) & COLOR_TRANS){
-							bufc[offs] = color & 0xFF;
-							color >>= 8;
-							bufc[offs+1] = color & 0xFF;
-							color >>= 8;
-							bufc[offs+2] = color & 0xFF;
+				if(c >= FONT_START){
+					fontoffs = c - FONT_START << 3;
+					ReadFB( buf, offset?, BOTTOM_Y_RES * CHAR_WIDTH * BYTES_PER_PIXEL );
+
+					offs = ((BOTTOM_ROWS - row) * CHAR_HEIGHT - 1 + col * BOTTOM_Y_RES * CHAR_WIDTH) * BYTES_PER_PIXEL;
+					for(y = 0; y < CHAR_HEIGHT; y++){
+						c = font[fontoffs++];
+						for(x = 0; x < BOTTOM_Y_RES * BYTES_PER_PIXEL * CHAR_WIDTH; x++){
+							if(~(color = c & 0x80 ? fgcolor : bgcolor) & COLOR_TRANS){
+								bufc[offs] = color & 0xFF;
+								color >>= 8;
+								bufc[offs+1] = color & 0xFF;
+								color >>= 8;
+								bufc[offs+2] = color & 0xFF;
+							}
+							c <<= 1;
+							offs += BOTTOM_Y_RES * BYTES_PER_PIXEL;
 						}
-						c <<= 1;
-						offs += BOTTOM_Y_RES * BYTES_PER_PIXEL;
+						offs -= BOTTOM_Y_RES * CHAR_WIDTH * BYTES_PER_PIXEL + BYTES_PER_PIXEL;
 					}
-					offs -= BOTTOM_Y_RES * CHAR_WIDTH * BYTES_PER_PIXEL + BYTES_PER_PIXEL;
+					WriteFB( buf, offset, BOTTOM_Y_RES * CHAR_WIDTH * BYTES_PER_PIXEL );
+					col++;
 				}
-				
-				WriteFB( buf, offset, BOTTOM_Y_RES * CHAR_WIDTH * BYTES_PER_PIXEL );
-				col++;
 				break;
 		}
 	}
-}
-
-void CopyMem(void *src, void *dst, unsigned size){ 
-	GSPGPU_FlushDataCache(src, size); 
-	GX_SetTextureCopy(src, dst, size, 0, 0, 0, 0, 8); 
-	GSPGPU_FlushDataCache(dst, size); 
-	svcSleepThread(0x200000LL); 
-}
-
-void WriteFB(void *buf, unsigned offset, unsigned size){
-	CopyMem(buf, (void*)(BOTTOM_FB0_LOC + offset), size);
-	CopyMem(buf, (void*)(BOTTOM_FB1_LOC + offset), size);
-}
-
-void ReadFB(void *buf, unsigned offset, unsigned size){
-	CopyMem((void*)(BOTTOM_FB0_LOC + offset), buf, size);
 }
 
 void print(char *value){
@@ -133,15 +135,8 @@ void print(unsigned value){
 	print(value, COLOR_FG_DEF, COLOR_BG_DEF);
 }
 
-void clearscreen(unsigned color){
-}
-
-void clearscreen(){
-	clearscreen(COLOR_BG_DEF);
-}
-
 int uvl_entry()
 {
-	print("\ftest string\r\n\t");
-	print(0x12345678, 0x00FF7F00, COLOR_TRANS);
+	print("\vtest string\r\n\t");
+	print(0xDEADBEEF, 0x00FF7F00, COLOR_TRANS);
 }

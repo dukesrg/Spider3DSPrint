@@ -116,10 +116,10 @@ void print(char *value, unsigned fgcolor, unsigned bgcolor){
 //					CopyMem(BUFFER_LOC, (void*)(BOTTOM_FB0_LOC + *(unsigned*)col * MEM_STRIPE_SIZE), MEM_STRIPE_SIZE);
 //					CopyMem(BUFFER_LOC, (void*)(BOTTOM_FB1_LOC + *(unsigned*)col * MEM_STRIPE_SIZE), MEM_STRIPE_SIZE);
 					GSPGPU_FlushDataCache(BUFFER_LOC, MEM_STRIPE_SIZE); 
-					GX_SetTextureCopy(BUFFER_LOC, (void*)(BOTTOM_FB0_LOC + *(unsigned*)col * MEM_STRIPE_SIZE, MEM_STRIPE_SIZE, 0, 0, 0, 0, 8); 
-					GX_SetTextureCopy(BUFFER_LOC, (void*)(BOTTOM_FB1_LOC + *(unsigned*)col * MEM_STRIPE_SIZE, MEM_STRIPE_SIZE, 0, 0, 0, 0, 8); 
-					GSPGPU_FlushDataCache((void*)(BOTTOM_FB0_LOC + *(unsigned*)col * MEM_STRIPE_SIZE, MEM_STRIPE_SIZE); 
-					GSPGPU_FlushDataCache((void*)(BOTTOM_FB1_LOC + *(unsigned*)col * MEM_STRIPE_SIZE, MEM_STRIPE_SIZE); 
+					GX_SetTextureCopy(BUFFER_LOC, (void*)(BOTTOM_FB0_LOC + *(unsigned*)col * MEM_STRIPE_SIZE, MEM_STRIPE_SIZE), 0, 0, 0, 0, 8); 
+					GX_SetTextureCopy(BUFFER_LOC, (void*)(BOTTOM_FB1_LOC + *(unsigned*)col * MEM_STRIPE_SIZE, MEM_STRIPE_SIZE), 0, 0, 0, 0, 8); 
+					GSPGPU_FlushDataCache((void*)(BOTTOM_FB0_LOC + *(unsigned*)col * MEM_STRIPE_SIZE, MEM_STRIPE_SIZE)); 
+					GSPGPU_FlushDataCache((void*)(BOTTOM_FB1_LOC + *(unsigned*)col * MEM_STRIPE_SIZE, MEM_STRIPE_SIZE)); 
 				}
 				(*(unsigned*)col)++;
 				break;

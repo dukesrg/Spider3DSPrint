@@ -23,7 +23,7 @@
 #define TOP_ROWS	TOP_Y_RES / CHAR_HEIGHT
 #define BOTTOM_COLS	BOTTOM_X_RES / CHAR_WIDTH
 #define BOTTOM_ROWS	BOTTOM_Y_RES / CHAR_HEIGHT
-#define BUFFER_LOC	(void*)0x18411000
+#define BUFFER_LOC	(void*)0x18410180
 #define FONT_START	32
 #define COLOR_FG_DEF	0x00FFFFFF
 #define COLOR_BG_DEF	0x00000000
@@ -73,14 +73,16 @@ void print(char *value, unsigned fgcolor, unsigned bgcolor){
 			case '\f':
 				(*(unsigned*)col) = 0;
 				(*(unsigned*)row) = 0;
-				for(unsigned i = 0; i < MEM_STRIPE_SIZE; i += 4){
-					bgcolor |= bgcolor << 24;
-					*(unsigned *)(BUFFER_LOC + i) = bgcolor;
-					bgcolor >>= 8;
-				}
-				for(unsigned i = 0; i < BOTTOM_FB_SIZE; i += MEM_STRIPE_SIZE){
-					CopyMem(BUFFER_LOC, (void*)(BOTTOM_FB0_LOC + i), MEM_STRIPE_SIZE);
-					CopyMem(BUFFER_LOC, (void*)(BOTTOM_FB1_LOC + i), MEM_STRIPE_SIZE);
+				if(~bgcolor & COLOR_TRANS){
+					for(unsigned i = 0; i < MEM_STRIPE_SIZE; i += 4){
+						bgcolor |= bgcolor << 24;
+						*(unsigned *)(BUFFER_LOC + i) = bgcolor;
+						bgcolor >>= 8;
+					}
+					for(unsigned i = 0; i < BOTTOM_FB_SIZE; i += MEM_STRIPE_SIZE){
+						CopyMem(BUFFER_LOC, (void*)(BOTTOM_FB0_LOC + i), MEM_STRIPE_SIZE);
+						CopyMem(BUFFER_LOC, (void*)(BOTTOM_FB1_LOC + i), MEM_STRIPE_SIZE);
+					}
 				}
 				break;
 			case '\r':
